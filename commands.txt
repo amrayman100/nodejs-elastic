@@ -1,0 +1,424 @@
+
+GET /products/_doc/100
+
+
+POST /products/_update/100
+{
+  "script": {
+    "source": "ctx._source.in_stock = 10"
+    
+  }
+}
+
+POST /products/_update/100
+{
+  "script": {
+    "source": "ctx._source.in_stock = 10"
+    
+  }
+}
+
+POST /products/_update/100
+{
+  "script": {
+    "source": "ctx._source.in_stock -= params.quantity",
+    "params": {
+      "quantity": 4
+    }
+    
+  }
+}
+
+PUT /products/_doc/100
+{
+ "name": "Toaster",
+  "price":64,
+  "in_stock": 4
+}
+
+
+GET /products/_doc/100
+
+
+POST /products/_update/100?if_primary_term=2&if_seq_no=9
+{
+  "doc":{
+    "in_stock" : 123
+  }
+}
+
+
+
+POST /products/_update_by_query
+{
+"script":{
+  "source": "ctx._source.in_stock--"
+},
+ "query":{
+   "match_all": {}
+ }
+}
+
+
+GET /products/_search
+{
+  "query":{
+   "match_all": {}
+ }
+}
+
+
+POST /products/_delete_by_query
+{
+ "query":{
+   "match_all": {}
+ }
+}
+
+
+GET /products/_doc/201
+
+
+POST /_bulk 
+{"index":{ "_index": "products" , "_id": 200 }}
+{ "name" : "Espresso" , "price":"199" , "in_stock": 5 }
+{"create":{ "_index": "products" , "_id": 201} }
+{ "name" : "Milk Forther" , "price":"149" , "in_stock": 5 }
+
+POST /products/_bulk
+{"update":{"_id": 201 }}
+{ "doc" : {"price":"196" }}
+{"delete":{ "_id": 200 }}
+
+
+
+POST /_analyze
+{
+  "text": "2 guys walk   into a bar , but the third ... DUCKS ..:)",
+  "analyzer": "standard"
+}
+
+
+POST /_analyze
+{
+  "text": "2 guys walk   into a bar , but the third ... DUCKS ..:)",
+  "char_filter": [],
+  "tokenizer": "standard",
+  "filter": ["lowercase"]
+}
+
+POST /_analyze
+{
+  "text": "2 guys walk   into a bar , but the third ... DUCKS ..:)",
+  "analyzer": "keyword"
+}
+
+POST /_analyze
+{
+  "text": ["2 guys walk" , "but the third"],
+  "analyzer": "standard"
+}
+
+PUT /reviews
+{
+  "mappings": {
+    "properties": {
+      "rating": { "type":"float"},
+      "content": { "type":"text"},
+      "product_id": { "type":"integer"},
+      "author":{ 
+        "properties": {
+          "first_name": { "type":"text"},
+          "last_name": { "type":"text"},
+          "email": { "type":"keyword"} 
+        }
+      }
+    }
+  }
+}
+
+GET /reviews/_mapping
+
+PUT /reviews_dot_notation
+{
+  "mappings": {
+    "properties": {
+      "rating": { "type": "float" },
+      "content": { "type": "text" },
+      "product_id": { "type": "integer" },
+      "author.first_name": { "type": "text" },
+      "author.last_name": { "type": "text" },
+      "author.email": { "type": "keyword" }
+    }
+  }
+}
+
+PUT /reviews/_mapping
+{
+  "properties":{
+    "created_at":{
+      "type": "date"
+    }
+  }
+}
+
+PUT /reviews/_mapping
+{
+  "properties": {
+    "author": {
+      "properties": {
+        "email": {
+          "type": "keyword",
+          "ignore_above": 256
+        }
+      }
+    }
+  }
+}
+
+ "query": {
+        "parent_id": {
+          "type": "employee",
+          "id": 2
+        }
+      }
+
+GET /department/_search
+{
+  "_source": false,
+  "query": {
+    "nested": {
+      "path": "employees",
+      "inner_hits": {},
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "match": {
+                "employees.position": "intern"
+              }
+            },
+            {
+              "term": {
+                "employees.gender.keyword": {
+                  "value": "F"
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}
+
+
+GET /department/_search
+{
+  "query": {
+    "has_child": {
+      "type": "employee",
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "range": {
+                "age": {
+                  "gte": 50
+                }
+              }
+            }
+          ],
+          "should": [
+            {
+              "term": {
+                "gender.keyword": "M"
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}
+
+
+PUT /company
+{
+  "mappings": {
+    "properties": {
+      "join_field": { 
+        "type": "join",
+        "relations": {
+          "company": ["department", "supplier"],
+          "department": "employee"
+        }
+      }
+    }
+  }
+}
+
+PUT /company/_doc/1
+{
+  "name": "My Company Inc.",
+  "join_field": "company"
+}
+
+PUT /company/_doc/2?routing=1
+{
+  "name": "Development",
+  "join_field": {
+    "name": "department",
+    "parent": 1
+  }
+}
+
+
+PUT /company/_doc/3?routing=1
+{
+  "name": "Bo Andersen",
+  "join_field": {
+    "name": "employee",
+    "parent": 2
+  }
+}
+
+
+GET /company/_search
+{
+  "query": {
+    "has_parent": {
+      "parent_type": "company",
+      "query": {
+        "match": {
+          "name": "My Company Inc"
+        }
+      }
+    }
+  }
+}
+
+
+GET /order/_search
+{
+  "size": 0,
+  "aggs": {
+    "total_sales": {
+      "sum": {
+        "field": "total_amount"
+      }
+    },
+    "avg_sale": {
+      "avg": {
+        "field": "total_amount"
+      }
+    },
+    "min_sale": {
+      "min": {
+        "field": "total_amount"
+      }
+    },
+    "max_sale": {
+      "max": {
+        "field": "total_amount"
+      }
+    }
+  }
+}
+
+GET /order/_search
+{
+  "size": 0,
+  "aggs": {
+    "status_terms": {
+      "terms": {
+        "field": "status"
+      },
+      "aggs": {
+        "status_stats": {
+          "stats": {
+            "field": "total_amount"
+          }
+        }
+      }
+    }
+  }
+}
+
+
+GET /order/_search
+{
+  "size": 0,
+  "aggs": {
+    "low_value": {
+      "filter": {
+        "range": {
+          "total_amount": {
+            "lt": 50
+          }
+        }
+      },
+      "aggs": {
+        "avg_amount": {
+          "avg": {
+            "field": "total_amount"
+          }
+        }
+      }
+    }
+  }
+}
+
+
+GET /recipe/_search
+{
+  "size": 0,
+  "aggs": {
+    "my_filter": {
+      "filters": {
+        "filters": {
+          "pasta": {
+            "match": {
+              "title": "pasta"
+            }
+          },
+          "spaghetti": {
+            "match": {
+              "title": "spaghetti"
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+GET /recipe/_search
+{
+  "size": 0,
+  "aggs": {
+    "my_filter": {
+      "filters": {
+        "filters": {
+          "pasta": {
+            "match": {
+              "title": "pasta"
+            }
+          },
+          "spaghetti": {
+            "match": {
+              "title": "spaghetti"
+            }
+          }
+        }
+      },
+      "aggs": {
+        "avg_rating": {
+          "avg": {
+            "field": "ratings"
+          }
+        }
+      }
+    }
+  }
+}
